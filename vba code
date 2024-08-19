@@ -1,0 +1,74 @@
+Option Explicit
+Sub Reply_All_with_Attach()
+
+Dim olItem, olReply As mailItem
+Dim olRecip As recipient
+Dim objAttachments As Outlook.Attachments
+Dim objAttachment As Outlook.Attachment
+Dim SignPic, strTempFilePath As String
+
+SignPic = "C:\Users\mianass\OneDrive - Santander Office 365\Documents\Mine\Signature\Picture1.png"
+
+Set olItem = Application.ActiveExplorer.Selection.Item(1)
+
+    If Not olItem Is Nothing Then
+        Set olReply = olItem.ReplyAll
+    End If
+
+    With olReply
+        If olItem.recipients.Count = 1 Then
+            .To = olItem.Sender.Name
+        Else
+            .To = olItem.Sender.Name & "; " & olItem.To
+            .CC = olItem.CC
+        End If
+
+        ' Adding a picture containing the signature
+        .Attachments.Add SignPic, 1, 0
+        .HTMLBody = "<br><br>" & "Thanks," & "<br><br>" & "<img src="cid:Picture1.png" width=""31%"" height=""5%"">" & olItem.HTMLBody
+
+        ' Add attachments (if any)
+        For Each objAttachment In olItem.Attachments
+            If outlook_att_IsEmbedded(objAttachment) = False Then
+                strTempFilePath = Environ("TEMP") & "\" & objAttachment.FileName
+                objAttachment.SaveAsFile strTempFilePath
+                .Attachments.Add strTempFilePath
+            End If
+        Next objAttachment
+        .Display
+    End With
+
+Set olReply = Nothing
+Set olItem = Nothing
+Set olRecip = Nothing
+Set objAttachments = Nothing
+Set objAttachment = Nothing
+Set SignPic = Nothing
+
+End Sub
+
+'if the attachment is not embedded into the body of the email
+Private Function outlook_att_IsEmbedded(Att As Outlook.Attachment) As Boolean
+
+  Dim PropAccessor As Outlook.PropertyAccessor
+  On Error GoTo outlook_att_IsEmbedded_error
+  outlook_att_IsEmbedded = False
+
+  Set PropAccessor = Att.PropertyAccessor
+
+  If PropAccessor.GetProperty(http://schemas.microsoft.com/mapi/proptag/0x3712001E) <> "" Or _
+     PropAccessor.GetProperty(http://schemas.microsoft.com/mapi/proptag/0x3713001E) <> "" Then
+    If PropAccessor.GetProperty(http://schemas.microsoft.com/mapi/proptag/0x37140003) = 4 Then
+       outlook_att_IsEmbedded = True
+    End If
+  End If
+
+outlook_att_IsEmbedded_exit:
+  Set PropAccessor = Nothing
+  Exit Function
+
+outlook_att_IsEmbedded_error:
+  outlook_att_IsEmbedded = False
+  Resume outlook_att_IsEmbedded_exit
+
+End Function
